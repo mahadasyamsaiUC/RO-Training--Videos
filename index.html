@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RO Technician Training Player</title>
+<style>
+:root{--navy:#0f1b2d;--char:#1b232e;--card:#223041;--line:#33465c;--txt:#f2f6fa;--mut:#9fb0c3;--blue:#3b8cff;--green:#2ec27e;--red:#ff5a5f;--amb:#f5b942}
+*{box-sizing:border-box}
+body{margin:0;background:var(--navy);color:var(--txt);font:16px/1.5 "Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+button,select,input{font:inherit;color:inherit}
+button{background:var(--card);border:1px solid var(--line);border-radius:8px;min-height:40px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--blue)}
+button.pri{background:var(--blue);border-color:var(--blue)}
+button.stop{background:#4a2228;border-color:var(--red)}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+select,input[type=text],input[type=search],input[type=url]{background:var(--char);border:1px solid var(--line);border-radius:8px;min-height:40px;padding:6px 10px;width:100%}
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--char);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+header h1{font-size:18px;margin:0;flex:1}
+#menuBtn{display:none}
+.layout{display:grid;grid-template-columns:300px 1fr;gap:16px;padding:16px;max-width:1500px;margin:auto}
+aside{background:var(--char);border:1px solid var(--line);border-radius:12px;padding:12px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;position:sticky;top:70px}
+.vi{display:block;width:100%;text-align:left;margin-top:8px;padding:10px;line-height:1.3}
+.vi.on{border-color:var(--blue);background:#1d3552}
+.vi small{display:block;color:var(--mut)}
+.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:10px;border:1px solid var(--line);margin-top:4px}
+.tag.s1{color:var(--amb);border-color:var(--amb)}.tag.s2{color:var(--green);border-color:var(--green)}
+main{min-width:0}
+.card{background:var(--char);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:16px;box-shadow:0 2px 8px #0005}
+.player{background:#000;border-radius:12px;overflow:hidden}
+.player video{width:100%;aspect-ratio:16/9;display:block;background:#000}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px;background:#0a1220}
+.ctl input[type=range]{accent-color:var(--blue)}
+#seek{flex:1 1 200px}#vol{width:90px}
+.ctl select{width:auto;min-height:36px}
+.time{font-variant-numeric:tabular-nums;color:var(--mut);font-size:14px}
+.meta h2{margin:4px 0}
+.meta p{color:var(--mut);margin:6px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:14px;color:var(--mut);margin-bottom:4px}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.caps{height:230px;overflow:auto;background:var(--navy);border:1px solid var(--line);border-radius:8px;padding:8px}
+.ln{padding:6px 0;border-bottom:1px solid var(--line)}
+.ln .o{color:var(--mut)}.ln .t{color:#7fd1ff;font-size:18px;font-weight:600}
+.ln.err .t,.err{color:var(--red)}
+.msg{font-size:14px;margin:6px 0;color:var(--amb)}
+#now{min-height:64px;background:var(--navy);border:1px dashed var(--blue);border-radius:8px;padding:8px;margin-top:8px}
+details{border:1px solid var(--line);border-radius:8px;margin-top:8px;background:var(--char)}
+summary{padding:10px 12px;cursor:pointer;font-weight:600}
+.ed{padding:4px 12px 12px;color:#dbe6f1;white-space:pre-wrap}
+.ed[contenteditable]{outline:none}
+.draft{display:inline-block;background:#4a3a14;color:var(--amb);border-radius:6px;padding:0 8px;font-size:12px;margin-left:8px}
+.rel{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.chk{display:flex;gap:6px;align-items:center;font-size:14px}
+.chk input{width:auto;min-height:0}
+@media(max-width:860px){
+ .layout{grid-template-columns:1fr;padding:8px}
+ aside{display:none;position:static;max-height:none}aside.open{display:block}
+ #menuBtn{display:inline-block}
+ .grid{grid-template-columns:1fr}
+ #vol{display:none}
+}
+</style>
+</head>
+<body>
+<header>
+ <button id="menuBtn" aria-label="Toggle video menu">☰ Videos</button>
+ <h1>RO Technician Training</h1>
+ <span class="tag" id="net"></span>
+</header>
+<div class="layout">
+ <aside id="side">
+  <input type="search" id="q" placeholder="Search by title or fault" aria-label="Search videos">
+  <div id="list"></div>
+ </aside>
+ <main>
+  <div class="player">
+   <video id="v" playsinline preload="metadata"><track id="trk" kind="subtitles"></video>
+   <div class="ctl">
+    <button id="prev" aria-label="Previous video">⏮</button>
+    <button id="pp" class="pri" aria-label="Play or pause">▶ Play</button>
+    <button id="next" aria-label="Next video">⏭</button>
+    <span class="time" id="tm">0:00 / 0:00</span>
+    <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Seek">
+    <button id="mute" aria-label="Mute">🔊</button>
+    <input type="range" id="vol" min="0" max="1" step="0.05" value="1" aria-label="Volume">
+    <select id="spd" aria-label="Playback speed"></select>
+    <button id="fs" aria-label="Fullscreen">⛶</button>
+   </div>
+  </div>
+  <div class="card meta" style="margin-top:16px">
+   <span class="tag" id="cat"></span> <span class="tag" id="st"></span>
+   <h2 id="ttl"></h2>
+   <p id="desc"></p>
+   <div id="verr" class="msg err" role="alert"></div>
+  </div>
+
+  <div class="card">
+   <h3 style="margin-top:0">Live Voice Translator</h3>
+   <div class="grid">
+    <div><label for="src">Source language</label><select id="src"></select></div>
+    <div><label for="tgt">Translate into</label><select id="tgt"></select></div>
+   </div>
+   <div class="row">
+    <button id="listen" class="pri">🎙 Start Listening</button>
+    <button id="unlisten" class="stop">Stop Listening</button>
+    <button id="speak">🔈 Speak Translation</button>
+    <button id="unspeak" class="stop">Stop Speaking</button>
+    <button id="clr">Clear Captions</button>
+   </div>
+   <div class="row">
+    <label class="chk"><input type="checkbox" id="showO" checked> Show Original Captions</label>
+    <label class="chk"><input type="checkbox" id="showT" checked> Show Translated Captions</label>
+   </div>
+   <div id="lmsg" class="msg"></div>
+   <div class="caps" id="caps" aria-live="polite"></div>
+
+   <h4 style="margin:16px 0 6px">Subtitles (.vtt)</h4>
+   <div class="row">
+    <input type="file" id="vtt" accept=".vtt" aria-label="Upload VTT subtitle file" style="flex:1;min-width:200px">
+    <button id="trAll">Translate subtitles</button>
+    <button id="dl">Download translated .vtt</button>
+   </div>
+   <div id="now" aria-live="polite">No subtitle file loaded. Upload a .vtt file, or use Start Listening for live microphone captions.</div>
+   <div id="smsg" class="msg"></div>
+
+   <details style="margin-top:12px"><summary>Translation service settings</summary>
+    <div class="ed" style="white-space:normal">
+     <label for="ep">Endpoint (LibreTranslate-compatible: POST JSON {q, source, target})</label>
+     <input type="url" id="ep" placeholder="https://your-server.example/translate">
+     <p>No private keys belong in this file. If your provider needs a key, put it on a small backend that you control and point the endpoint at that backend. No default endpoint is set, because public endpoints can change or stop working.</p>
+    </div>
+   </details>
+  </div>
+
+  <div class="card">
+   <h3 style="margin-top:0">Training notes <span class="draft">DRAFT – trainer to verify</span></h3>
+   <p class="msg">Click inside any section to edit. Edits are saved in this browser only.</p>
+   <div id="secs"></div>
+  </div>
+
+  <div class="card">
+   <h3 style="margin-top:0">Related videos</h3>
+   <div class="rel" id="rel"></div>
+  </div>
+ </main>
+</div>
+
+<script>
+/* ================= VIDEO LIBRARY (edit here) =================
+   Files must sit next to index.html, or set videoBase to "videos/".
+   Add "vtt": "subs/file.vtt" to preload a subtitle file for a video. */
+const CONFIG = { videoBase: "", translateEndpoint: "" };
+const LIBRARY = [
+ {id:"wrong-pow", file:"Wrong_POW_.mp4", title:"Wrong POW", category:"Workflow", faults:"pow pre-job workflow mistake",
+  desc:"Training video on a wrong Pre-Job Operating Workflow (POW). Draft description: trainer to confirm what the video demonstrates."},
+ {id:"prefilter-leak", file:"PRE-FILTER_LEAKAGE_.mp4", title:"Pre-Filter Leakage", category:"Leakage", faults:"pre filter leak housing",
+  desc:"Training video on leakage around the pre-filter. Draft description: trainer to confirm the leak point and fix shown."},
+ {id:"prefilter-cap", file:"Pre_filter_cap_leakage.mp4", title:"Pre-Filter Cap Leakage", category:"Leakage", faults:"pre filter cap leak",
+  desc:"Training video on leakage at the pre-filter cap. Draft description: trainer to confirm."},
+ {id:"dispensing", file:"Dispensing_channel_leakage.mp4", title:"Dispensing Channel Leakage", category:"Leakage", faults:"dispensing channel leak tap",
+  desc:"Training video on leakage in the dispensing channel. Draft description: trainer to confirm."},
+ {id:"booster", file:"Ro_life_booster_leakage.mp4", title:"RO Life Booster Leakage", category:"Leakage", faults:"ro life booster leak",
+  desc:"Training video on leakage at the RO life booster. Draft description: trainer to confirm."},
+ {id:"lpm", file:"Low_Power_Mode_LPM_.mp4", title:"Low Power Mode (LPM)", category:"Operation", faults:"low power mode lpm",
+  desc:"Training video on Low Power Mode (LPM). Draft description: trainer to confirm."},
+ {id:"pause28", file:"Job_can_be_paused_for_28_Days.mp4", title:"Job Can Be Paused for 28 Days", category:"Workflow", faults:"job pause 28 days",
+  desc:"Training video on pausing a job for up to 28 days. Draft description: trainer to confirm."}
+];
+const SECTIONS = ["Video Overview","Fault Symptoms","Tools and Spare Parts","Step-by-Step Troubleshooting","Corrective Action","Final Quality Check","Technician Safety","Key Learning Points"];
+const DEFAULT_TEXT = {
+ "Technician Safety":"Isolate the water supply and switch off and unplug electrical power before opening the unit. Follow the manufacturer's service procedure.",
+};
+const LANGS = [["en","English","en-IN"],["hi","Hindi","hi-IN"],["te","Telugu","te-IN"],["ta","Tamil","ta-IN"],["kn","Kannada","kn-IN"],["ml","Malayalam","ml-IN"]];
+const SPEEDS = [0.5,0.75,1,1.25,1.5,2];
+
+/* ================= helpers ================= */
+const $ = id => document.getElementById(id);
+const store = {
+ get(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}},
+ set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+};
+const fmt = s => isFinite(s) ? Math.floor(s/60)+":"+String(Math.floor(s%60)).padStart(2,"0") : "0:00";
+const v = $("v");
+let cur = 0, prog = store.get("ro_prog",{}), edits = store.get("ro_edit",{});
+let cues = [], lines = [], lastTrans = "", autoSpeak = false;
+
+/* ================= library / navigation ================= */
+function status(id){const p=prog[id];return p&&p.done?2:(p&&p.t>2?1:0)}
+const SL = ["Not Started","In Progress","Completed"];
+function renderList(){
+ const q = $("q").value.toLowerCase();
+ $("list").innerHTML = "";
+ LIBRARY.forEach((x,i)=>{
+  if(q && !(x.title+" "+x.faults+" "+x.category).toLowerCase().includes(q)) return;
+  const b = document.createElement("button");
+  b.className = "vi"+(i===cur?" on":"");
+  b.innerHTML = `${x.title}<small>${x.category}</small><span class="tag s${status(x.id)}">${SL[status(x.id)]}</span>`;
+  b.onclick = ()=>{load(i);$("side").classList.remove("open")};
+  $("list").appendChild(b);
+ });
+ $("rel").innerHTML = "";
+ LIBRARY.forEach((x,i)=>{ if(i===cur) return;
+  const b=document.createElement("button");b.className="vi";
+  b.innerHTML=`${x.title}<small>${x.category}</small>`;b.onclick=()=>load(i);$("rel").appendChild(b);});
+}
+function load(i){
+ cur = (i+LIBRARY.length)%LIBRARY.length;
+ const x = LIBRARY[cur];
+ $("verr").textContent = "";
+ v.src = encodeURI(CONFIG.videoBase + x.file);
+ v.load();
+ const p = prog[x.id]; if(p&&!p.done&&p.t>2) v.addEventListener("loadedmetadata",()=>{v.currentTime=p.t},{once:true});
+ $("ttl").textContent = x.title; $("desc").textContent = x.desc; $("cat").textContent = x.category;
+ cues=[]; $("now").textContent="No subtitle file loaded. Upload a .vtt file, or use Start Listening for live microphone captions.";
+ if(x.vtt) fetch(x.vtt).then(r=>{if(!r.ok)throw 0;return r.text()}).then(t=>{cues=parseVTT(t);$("smsg").textContent=cues.length+" subtitle lines loaded."}).catch(()=>{$("smsg").textContent="Could not load "+x.vtt});
+ renderSecs(); renderList(); updSt();
+}
+function updSt(){const s=status(LIBRARY[cur].id);const e=$("st");e.textContent=SL[s];e.className="tag s"+s}
+function renderSecs(){
+ const x = LIBRARY[cur]; $("secs").innerHTML="";
+ SECTIONS.forEach((n,i)=>{
+  const key = x.id+"|"+n;
+  const d = document.createElement("details"); if(i===0) d.open = true;
+  const base = n==="Video Overview" ? x.desc : (DEFAULT_TEXT[n] || "Draft: trainer to add content for this section.");
+  d.innerHTML = `<summary>${n}</summary>`;
+  const e = document.createElement("div"); e.className="ed"; e.contentEditable="true"; e.textContent = edits[key] ?? base;
+  e.onblur = ()=>{edits[key]=e.textContent;store.set("ro_edit",edits)};
+  d.appendChild(e); $("secs").appendChild(d);
+ });
+}
+
+/* ================= player controls ================= */
+SPEEDS.forEach(s=>{const o=document.createElement("option");o.value=s;o.textContent=s+"x";if(s===1)o.selected=true;$("spd").appendChild(o)});
+$("pp").onclick = ()=> v.paused ? v.play().catch(e=>$("verr").textContent="Cannot play: "+e.message) : v.pause();
+v.onplay = ()=>$("pp").textContent="⏸ Pause"; v.onpause = ()=>$("pp").textContent="▶ Play";
+$("prev").onclick = ()=>load(cur-1); $("next").onclick = ()=>load(cur+1);
+$("seek").oninput = ()=>{if(v.duration) v.currentTime = $("seek").value/1000*v.duration};
+$("vol").oninput = ()=>{v.volume=$("vol").value;v.muted=false;$("mute").textContent=v.volume?"🔊":"🔇"};
+$("mute").onclick = ()=>{v.muted=!v.muted;$("mute").textContent=v.muted?"🔇":"🔊"};
+$("spd").onchange = ()=>v.playbackRate = +$("spd").value;
+$("fs").onclick = ()=>{const p=v.parentElement; document.fullscreenElement ? document.exitFullscreen() : (p.requestFullscreen||p.webkitRequestFullscreen||(()=>v.webkitEnterFullscreen&&v.webkitEnterFullscreen())).call(p)};
+v.onerror = ()=>{$("verr").textContent = "Video not found: "+LIBRARY[cur].file+". Place the MP4 files in the same folder as index.html (or set CONFIG.videoBase)."};
+let saveT=0;
+v.ontimeupdate = ()=>{
+ $("tm").textContent = fmt(v.currentTime)+" / "+fmt(v.duration);
+ if(v.duration) $("seek").value = v.currentTime/v.duration*1000;
+ const id = LIBRARY[cur].id, now = Date.now();
+ if(now-saveT>2000){saveT=now; prog[id]=Object.assign(prog[id]||{},{t:v.currentTime}); if(v.duration && v.currentTime/v.duration>=0.95) prog[id].done=true; store.set("ro_prog",prog); updSt();}
+ showCue();
+};
+v.onended = ()=>{const id=LIBRARY[cur].id;prog[id]={t:0,done:true};store.set("ro_prog",prog);updSt();renderList()};
+
+/* ================= languages ================= */
+LANGS.forEach(l=>{ $("tgt").add(new Option(l[1],l[0])); $("src").add(new Option(l[1],l[0])); });
+$("src").insertBefore(new Option("Auto-detect","auto"),$("src").firstChild); $("src").value="auto"; $("tgt").value="hi";
+const rc = c => (LANGS.find(l=>l[0]===c)||[])[2];
+
+/* ================= translation (separate step) ================= */
+async function translate(text, s, t){
+ if(s===t) return text;
+ const ep = $("ep").value.trim() || CONFIG.translateEndpoint;
+ if(!ep) throw new Error("No translation endpoint set. Open 'Translation service settings' and enter one.");
+ const r = await fetch(ep,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({q:text,source:s,target:t,format:"text"})});
+ if(!r.ok) throw new Error("Translation service returned "+r.status);
+ const j = await r.json();
+ if(!j.translatedText) throw new Error("Unexpected response from translation service.");
+ return j.translatedText;
+}
+$("ep").value = store.get("ro_ep",""); $("ep").onchange = ()=>store.set("ro_ep",$("ep").value.trim());
+
+/* ================= live captions ================= */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, wantListen = false;
+function renderCaps(){
+ const box = $("caps"), stick = box.scrollTop+box.clientHeight >= box.scrollHeight-30;
+ box.innerHTML = "";
+ lines.forEach(l=>{
+  const d = document.createElement("div"); d.className="ln"+(l.err?" err":"");
+  let h=""; if($("showO").checked) h+=`<div class="o"></div>`; if($("showT").checked) h+=`<div class="t"></div>`;
+  d.innerHTML=h; const o=d.querySelector(".o"),t=d.querySelector(".t");
+  if(o) o.textContent=l.o; if(t) t.textContent=l.pending?"Translating…":(l.err||l.t||"");
+  box.appendChild(d);
+ });
+ if(stick) box.scrollTop = box.scrollHeight;
+}
+$("showO").onchange = $("showT").onchange = renderCaps;
+async function addLine(text){
+ const l = {o:text,t:"",pending:true}; lines.push(l); renderCaps();
+ try{ l.t = await translate(text,$("src").value,$("tgt").value); lastTrans=l.t; if(autoSpeak) say(l.t);}
+ catch(e){ l.err = e.message; }
+ l.pending=false; renderCaps();
+}
+$("listen").onclick = ()=>{
+ const m=$("lmsg"); m.textContent="";
+ if(!SR){m.textContent="Speech recognition is not supported in this browser. Try Chrome or Edge, or upload a .vtt subtitle file.";return}
+ if(!window.isSecureContext){m.textContent="Microphone access needs HTTPS (or localhost).";return}
+ rec = new SR(); rec.continuous=true; rec.interimResults=false;
+ const s=$("src").value; if(s!=="auto") rec.lang=rc(s);
+ rec.onresult = e=>{for(let i=e.resultIndex;i<e.results.length;i++) if(e.results[i].isFinal) addLine(e.results[i][0].transcript.trim())};
+ rec.onerror = e=>{
+  const map={"not-allowed":"Microphone permission was blocked. Allow microphone access in the browser address bar and try again.","service-not-allowed":"Microphone permission was blocked.","no-speech":"","network":"Speech recognition needs an internet connection.","audio-capture":"No microphone found."};
+  const t = e.error in map ? map[e.error] : "Speech recognition error: "+e.error;
+  if(t) m.textContent=t; if(e.error==="not-allowed"||e.error==="service-not-allowed"||e.error==="audio-capture") wantListen=false;
+ };
+ rec.onend = ()=>{ if(wantListen){try{rec.start()}catch(e){}} else {$("listen").textContent="🎙 Start Listening"} };
+ wantListen = true;
+ try{rec.start(); $("listen").textContent="🎙 Listening…"; m.textContent="Listening through the microphone. If the video plays through speakers, accuracy may drop; headphones on the video and a clear voice work best."}catch(e){m.textContent="Could not start: "+e.message}
+};
+$("unlisten").onclick = ()=>{wantListen=false; if(rec) try{rec.stop()}catch(e){}; $("listen").textContent="🎙 Start Listening"};
+$("clr").onclick = ()=>{lines=[];lastTrans="";renderCaps()};
+
+/* ================= speech output ================= */
+function say(text){
+ const m=$("lmsg"); if(!("speechSynthesis" in window)){m.textContent="Text-to-speech is not supported in this browser.";return}
+ const code = rc($("tgt").value), u = new SpeechSynthesisUtterance(text); u.lang = code;
+ const voices = speechSynthesis.getVoices();
+ const vo = voices.find(x=>x.lang===code) || voices.find(x=>x.lang.startsWith(code.slice(0,2)));
+ if(voices.length && !vo){m.textContent="No voice installed for "+code+" on this device. Install a language voice in your device settings."; return}
+ if(vo) u.voice=vo; speechSynthesis.speak(u);
+}
+$("speak").onclick = ()=>{autoSpeak=true; if(lastTrans) say(lastTrans); else $("lmsg").textContent="Speaking is on. New translated lines will be read aloud."};
+$("unspeak").onclick = ()=>{autoSpeak=false; if("speechSynthesis" in window) speechSynthesis.cancel()};
+
+/* ================= VTT subtitles ================= */
+function ts(s){const p=s.trim().split(":").map(parseFloat);return p.length===3?p[0]*3600+p[1]*60+p[2]:p[0]*60+p[1]}
+function parseVTT(txt){
+ return txt.replace(/\r/g,"").split(/\n\n+/).map(b=>{
+  const L=b.split("\n"), i=L.findIndex(x=>x.includes("-->")); if(i<0) return null;
+  const [a,c]=L[i].split("-->"); return {a:ts(a), b:ts(c.trim().split(" ")[0]), time:L[i], o:L.slice(i+1).join(" "), t:""};
+ }).filter(Boolean);
+}
+$("vtt").onchange = e=>{
+ const f=e.target.files[0]; if(!f) return;
+ const r=new FileReader(); r.onload=()=>{cues=parseVTT(r.result); $("smsg").textContent=cues.length?cues.length+" subtitle lines loaded.":"No cues found. Check that this is a valid WebVTT file."}; r.readAsText(f);
+};
+let shown=-1;
+async function showCue(){
+ if(!cues.length) return;
+ const i = cues.findIndex(c=>v.currentTime>=c.a && v.currentTime<=c.b);
+ if(i===shown) return; shown=i;
+ if(i<0){$("now").textContent="";return}
+ const c=cues[i], n=$("now"); n.innerHTML="";
+ if($("showO").checked){const d=document.createElement("div");d.className="o";d.style.color="var(--mut)";d.textContent=c.o;n.appendChild(d)}
+ if($("showT").checked){const d=document.createElement("div");d.className="t";d.style.cssText="color:#7fd1ff;font-weight:600;font-size:18px";n.appendChild(d);
+  if(!c.t){try{c.t=await translate(c.o,$("src").value,$("tgt").value);lastTrans=c.t;if(autoSpeak)say(c.t)}catch(e){c.t="";d.className="err";d.textContent=e.message;return}}
+  d.textContent=c.t;}
+}
+$("trAll").onclick = async ()=>{
+ const m=$("smsg"); if(!cues.length){m.textContent="Load a .vtt subtitle file first.";return}
+ let n=0; cues.forEach(c=>c.t="");
+ try{ for(const c of cues){c.t=await translate(c.o,$("src").value,$("tgt").value); m.textContent="Translating "+(++n)+" / "+cues.length+"…"} m.textContent="Subtitles translated. You can download them."; }
+ catch(e){m.textContent="Stopped: "+e.message}
+};
+$("dl").onclick = ()=>{
+ if(!cues.length||cues.some(c=>!c.t)){$("smsg").textContent="Translate all subtitles first.";return}
+ const out="WEBVTT\n\n"+cues.map((c,i)=>(i+1)+"\n"+c.time+"\n"+c.t).join("\n\n")+"\n";
+ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([out],{type:"text/vtt"}));
+ a.download=LIBRARY[cur].id+"."+$("tgt").value+".vtt"; a.click(); URL.revokeObjectURL(a.href);
+};
+
+/* ================= misc ================= */
+$("q").oninput = renderList;
+$("menuBtn").onclick = ()=>$("side").classList.toggle("open");
+function net(){$("net").textContent=navigator.onLine?"Online":"Offline: translation unavailable";$("net").className="tag "+(navigator.onLine?"s2":"s1")}
+addEventListener("online",net);addEventListener("offline",net);net();
+if("speechSynthesis" in window) speechSynthesis.getVoices();
+load(0);
+</script>
+</body>
+</html>
